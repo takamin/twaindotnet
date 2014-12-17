@@ -81,6 +81,40 @@ namespace TwainDotNet.Win32
 
             return bitmap;
         }
+        public Bitmap[] RenderToBitmap(int splitCount) {
+            Bitmap[] bitmap = new Bitmap[splitCount * splitCount];
+            int splitHeight = _rectangle.Height / splitCount;
+            int splitWidth = _rectangle.Width / splitCount;
+            int lastSplitHeight = _rectangle.Height - splitHeight * (splitCount - 1);
+            int lastSplitWidth = _rectangle.Width - splitWidth * (splitCount - 1);
+            for (int row = 0; row < splitCount; row++) {
+                for (int col = 0; col < splitCount; col++) {
+                    int bitmapIndex = (splitCount - row - 1) * splitCount + col;
+                    int bitmapHeight = (row > 0) ? splitHeight : lastSplitHeight;
+                    int bitmapWidth = (col < splitCount - 1) ? splitWidth : lastSplitWidth;
+
+                    bitmap[bitmapIndex] = new Bitmap(bitmapWidth, bitmapHeight);
+
+                    using (Graphics graphics = Graphics.FromImage(bitmap[bitmapIndex])) {
+                        IntPtr hdc = graphics.GetHdc();
+
+                        try {
+                            Gdi32Native.SetDIBitsToDevice(
+                                hdc, 0, 0, bitmapWidth, bitmapHeight,
+                                splitWidth * col, splitHeight * row,
+                                0, _rectangle.Height, _pixelInfoPointer, _bitmapPointer, 0);
+                        } finally {
+                            graphics.ReleaseHdc(hdc);
+                        }
+                    }
+
+                    bitmap[bitmapIndex].SetResolution(
+                        PpmToDpi(_bitmapInfo.XPelsPerMeter), PpmToDpi(_bitmapInfo.YPelsPerMeter));
+                }
+            }
+
+            return bitmap;
+        }
 
         private static float PpmToDpi(double pixelsPerMeter)
         {

@@ -235,7 +235,25 @@ namespace TwainDotNet
                     {
                         using (var renderer = new BitmapRenderer(hbitmap))
                         {
-                            TransferImageEventArgs args = new TransferImageEventArgs(renderer.RenderToBitmap(), pendingTransfer.Count != 0);
+                            TransferImageEventArgs args = null;
+                            int splitCount = 1;
+                            while (args == null) {
+                                try {
+                                    if (splitCount == 1) {
+                                        args = new TransferImageEventArgs(renderer.RenderToBitmap(), pendingTransfer.Count != 0);
+                                    } else {
+                                        args = new TransferImageEventArgs(renderer.RenderToBitmap(splitCount), pendingTransfer.Count != 0);
+                                    }
+                                    if (args == null) {
+                                        break;
+                                    }
+                                } catch (Exception ex) {
+                                    splitCount++;
+                                }
+                            }
+                            if (args == null) {
+                                break;
+                            }
                             TransferImage(this, args);
                             if (!args.ContinueScanning)
                                 break;
